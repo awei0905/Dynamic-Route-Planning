@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>文檔標題</title>
+<script
+  src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+</head>
+ 
+<body>
+<canvas id="myCanvas" width="600" height="600"></canvas>
+</body>
+<script type="text/javascript">
+    var unit = 50
+    var dot_radius = 2
+    function drawDot(ctx, x, y) {
+        var tempFillStyle = ctx.fillStyle
+        ctx.beginPath()
+        ctx.arc(dot_radius + x * unit, dot_radius + y * unit, dot_radius * 5, 0, 2 * Math.PI, false)
+        ctx.fillStyle = '#000'
+        ctx.fill()
+        ctx.fillStyle = tempFillStyle
+    }
+
+    function drawStartDot(ctx, x, y) {
+        var tempStrokeStyle = ctx.strokeStyle
+        var tempLineWidth = ctx.lineWidth
+        ctx.beginPath()
+        ctx.rect(x * unit - dot_radius * 5, y * unit - dot_radius * 5, 12 * dot_radius,  12 * dot_radius)
+        ctx.strokeStyle = '#F00'
+        ctx.lineWidth = 4
+        ctx.stroke()
+        ctx.strokeStyle = tempStrokeStyle
+        ctx.lineWidth = tempLineWidth
+    }
+
+    function drawEndDot(ctx, x, y) {
+        var tempStrokeStyle = ctx.strokeStyle
+        var tempLineWidth = ctx.lineWidth
+        ctx.beginPath()
+        ctx.strokeStyle = '#00F'        
+        ctx.arc(dot_radius + x * unit, dot_radius + y * unit, dot_radius * 5, 0, 2 * Math.PI, false)        
+        ctx.lineWidth = 4
+        ctx.stroke()
+        ctx.strokeStyle = tempStrokeStyle
+        ctx.lineWidth = tempLineWidth
+    }
+
+    var canvas = $('#myCanvas')[0];
+    var ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#F2F2F2'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    
+    ctx.translate(50, 50)
+
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 4
+    for(var i = 0; i < 11; i++) {
+        ctx.moveTo(dot_radius + i * unit, 0)
+        ctx.lineTo(dot_radius + i * unit, unit * 10 + dot_radius * 2)
+        ctx.moveTo(0, dot_radius + i * unit)
+        ctx.lineTo(unit * 10 + dot_radius * 2, dot_radius + i * unit)
+    }
+    ctx.stroke()
+
+    var matrix = new Array(11)
+    var startX, startY, finalX, finalY;
+
+    for(var i = 0; i < 11; i++) {
+        matrix[i] = new Array(11).fill(0)
+    }
+
+    for(var i = 0; i < 34; i++) {
+        var x, y
+
+        do {
+            x = Math.floor(Math.random() * 1000 % 11)
+            y = Math.floor(Math.random() * 1000 % 11)
+        } while(matrix[x][y] !== 0)
+
+        if(i < 32) {
+            drawDot(ctx, x, y)
+            matrix[x][y] = 1 
+        } else if (i == 32) {
+            //drawStartDot(ctx, x, y)
+            startX = x
+            startY = y
+            matrix[x][y] = 2
+        } else if (i == 33) {
+            //drawEndDot(ctx, x, y)
+            matrix[x][y] = 3 
+            finalX = x
+            finalY = y
+        }
+    }
+
+    var movX = [-1, 0, 1, 0]
+    var movY = [0, 1, 0, -1]
+    var step = 10, finalStep
+    var foundFinal = false
+    var queue = [startX, startY, step]
+
+    queue.push()
+
+    while(queue.length > 0 && !foundFinal) {
+        var queueX = queue.shift()
+        var queueY = queue.shift()
+        var queueStep = queue.shift()
+        
+        for(var i = 0; i < 4; i++) {
+            var nowX = queueX + movX[i]
+            var nowY = queueY + movY[i]
+            var nowStep = queueStep + 1
+            if(nowX < 0 || nowX > 10 || nowY < 0 || nowY > 10)
+                continue
+            if(matrix[nowX][nowY] === 3) {
+                foundFinal = true
+                finalStep = nowStep
+                break
+            }
+            if(matrix[nowX][nowY] === 0) {
+                matrix[nowX][nowY] = nowStep
+                queue.push(nowX)
+                queue.push(nowY)
+                queue.push(nowStep)
+            }
+        }
+    }
+
+    if(foundFinal) {
+        queue=[finalX, finalY, finalStep]
+        foundFinal = false
+    } else {
+        queue = []
+    }
+
+    while(queue.length > 0 && !foundFinal) {
+        var queueX = queue.shift()
+        var queueY = queue.shift()
+        var queueStep = queue.shift()
+        for(var i = 0; i < 4; i++) {
+            var nowX = queueX + movX[i]
+            var nowY = queueY + movY[i]
+            var nowStep = queueStep - 1
+            
+            if(nowX < 0 || nowX > 10 || nowY < 0 || nowY > 10) {
+                continue
+            }
+            
+            if(matrix[nowX][nowY] === 2) {
+                
+                ctx.beginPath()
+                var tempStrokeStyle = ctx.strokeStyle
+                ctx.strokeStyle = '#00F';
+                ctx.moveTo(dot_radius + queueX * unit, dot_radius + queueY * unit)
+                ctx.lineTo(dot_radius + nowX * unit, dot_radius + nowY * unit)
+                ctx.stroke()
+                ctx.strokeStyle = tempStrokeStyle
+
+                foundFinal = true
+                break
+            }
+            
+            if(matrix[nowX][nowY] === nowStep) {                
+                ctx.beginPath()
+                var tempStrokeStyle = ctx.strokeStyle
+                ctx.strokeStyle = '#00F';
+                ctx.moveTo(dot_radius + queueX * unit, dot_radius + queueY * unit)
+                ctx.lineTo(dot_radius + nowX * unit, dot_radius + nowY * unit)
+                ctx.stroke()
+                ctx.strokeStyle = tempStrokeStyle
+                queue.push(nowX)
+                queue.push(nowY)
+                queue.push(nowStep)
+                break
+            }
+        }
+    }
+
+    ctx.beginPath()
+    ctx.fillStyle = '#F00'
+    ctx.fillRect(startX * unit - dot_radius * 5, startY * unit - dot_radius * 5, 12 * dot_radius,  12 * dot_radius)
+    ctx.fill()
+
+    ctx.beginPath()
+    ctx.fillStyle = '#00F'
+    ctx.arc(dot_radius + finalX * unit, dot_radius + finalY * unit, dot_radius * 5, 0, 2 * Math.PI, false) 
+    ctx.fill()
+
+</script> 
+</html>
